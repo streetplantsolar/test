@@ -275,4 +275,4 @@ def dashboard():
     return render_template('dashboard.html', user=user)
 
 if __name__ == '__main__':
-    server.run(debug=True, port=8053)
+    server.run(debug=False, port=8053)
