@@ -275,4 +275,5 @@ def dashboard():
     return render_template('dashboard.html', user=user)
 
 if __name__ == '__main__':
-    server.run(debug=False, port=8053)
+    port = int(os.environ.get('PORT', 5000))
+    server.run(debug=False, host='0.0.0.0', port=port)
