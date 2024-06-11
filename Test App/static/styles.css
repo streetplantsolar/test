@@ -1,0 +1,167 @@
+/* General styles */
+body {
+    font-family: 'Source Sans 3', sans-serif;
+}
+
+/* Navbar styles */
+.link-bar-3 {
+    width: 493px;
+    height: 36px;
+    color: #444444;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: center;
+}
+
+.navbar-nav .nav-item {
+    margin-right: 40px; /* Double the spacing between navbar items */
+}
+
+.navbar-nav .nav-item:last-child {
+    margin-right: 0; /* Remove the margin from the last item */
+}
+
+/* Button styles */
+.button-2 {
+    width: 117px;
+    height: 36px;
+    padding: 0px 10px;
+    background: #243E16;
+    color: #FFFFFF;
+    border-color: #444444;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 5px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: center;
+    margin-right: 20px; /* Space between Sign Up and Log In buttons */
+}
+
+.button-3 {
+    width: 117px;
+    height: 36px;
+    padding: 0px 10px;
+    background: #EDF0F400;
+    color: #444444;
+    border-color: #444444;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 5px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: center;
+}
+
+.button-4 {
+    width: 228px;
+    height: 48px;
+    padding: 0px 10px;
+    background: #243E16;
+    color: #FFFFFF;
+    border-color: #000000;
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 5px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    text-align: center;
+}
+
+/* Landing page styles */
+.header-3 {
+    width: 419px;
+    height: 89px;
+    color: #243E16;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 700;
+    font-size: 38px;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.dive-deep-into-data-driven-diagnostics-to-secure-a {
+    width: 331px;
+    height: 82px;
+    color: #929292;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.image-placeholder-1-copy-2 {
+    width: 613px;
+    height: 344px;
+    background: #F7F6F6;
+    margin: 0 auto; /* Center the placeholder */
+}
+
+.header-7 {
+    width: 597px;
+    height: 29px;
+    color: #444444;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    line-height: 1.2;
+    text-align: center;
+    margin: 20px auto; /* Center the header */
+}
+
+.image-placeholder-1-copy-5 {
+    width: 150px;
+    height: 80px;
+    background: #F7F6F6;
+    border-radius: 15px;
+    margin: 10px; /* Add margin for spacing */
+}
+
+.explore-over-16-000-modules-in-our-database {
+    width: 420px;
+    height: 35px;
+    color: #929292;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: center;
+    margin: 20px auto; /* Center the text */
+}
+
+/* FAQ styles */
+.faq-header {
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 700;
+    font-size: 38px;
+    color: #243E16;
+    margin-bottom: 30px;
+}
+
+.card-header .btn-link {
+    font-weight: 700;
+    color: #243E16;
+    text-align: left;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 20px;
+    padding: 10px 15px;
+}
+
+.card-header .btn-link.collapsed {
+    color: #007bff;
+}
+
+.card-body {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 16px;
+    color: #929292;
+    line-height: 1.5;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-top: 1px solid #D6D6D6;
+}
