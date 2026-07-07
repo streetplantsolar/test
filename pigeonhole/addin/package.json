@@ -1,0 +1,17 @@
+{
+  "name": "pigeonhole-addin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pigeonhole — Outlook add-in that learns your filing habits locally and files email in one click.",
+  "scripts": {
+    "dev-certs": "office-addin-dev-certs install",
+    "dev": "http-server . -p 3000 --ssl --cert ~/.office-addin-dev-certs/localhost.crt --key ~/.office-addin-dev-certs/localhost.key -c-1",
+    "validate": "office-addin-manifest validate manifest.xml",
+    "test": "node ../scripts/test-classifier.js"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "office-addin-dev-certs": "^2.0.0",
+    "office-addin-manifest": "^2.0.0"
+  }
+}

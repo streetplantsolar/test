@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pigeonhole — file email where you would, in one click</title>
+<meta name="description" content="An Outlook add-in that learns how you file email and suggests the right folder every time. Trains locally in under a minute. 100% private — no cloud, no AI tokens.">
+<link rel="icon" href="assets/icon-32.png">
+<style>
+  :root {
+    --ink: #1b2a41;
+    --ink-soft: #4a5a70;
+    --ink-faint: #8b97a7;
+    --paper: #fbfaf7;
+    --card: #ffffff;
+    --line: #e6e3db;
+    --accent: #e8a87c;
+    --accent-deep: #c97b4a;
+    --good: #3d7a5c;
+    --radius: 12px;
+    --sans: -apple-system, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.6; }
+  a { color: inherit; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(251,250,247,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; text-decoration: none; letter-spacing: -0.01em; }
+  .brand svg { width: 26px; height: 26px; }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a { text-decoration: none; font-size: 14px; color: var(--ink-soft); }
+  .nav-links a:hover { color: var(--ink); }
+  .btn { display: inline-block; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); cursor: pointer; font-family: inherit; }
+  .btn:hover { border-color: var(--ink-faint); }
+  .btn-primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .btn-primary:hover { background: #2a3f5d; }
+  .btn-lg { padding: 13px 26px; font-size: 15px; border-radius: 12px; }
+
+  /* hero */
+  header.hero { padding: 90px 0 70px; }
+  .hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 56px; align-items: center; }
+  .kicker { font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-deep); margin-bottom: 18px; }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(34px, 5vw, 52px); line-height: 1.12; letter-spacing: -0.015em; margin-bottom: 20px; }
+  .hero p.lead { font-size: 18px; color: var(--ink-soft); max-width: 46ch; margin-bottom: 30px; }
+  .hero-ctas { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .hero-note { font-size: 13px; color: var(--ink-faint); margin-top: 14px; }
+
+  /* taskpane mock */
+  .mock { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px -30px rgba(27,42,65,.35); overflow: hidden; max-width: 360px; margin-left: auto; }
+  .mock-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; }
+  .mock-bar svg { width: 18px; height: 18px; }
+  .mock-body { padding: 16px; }
+  .mock-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+  .mock-subject { font-weight: 600; font-size: 13px; margin: 3px 0 1px; }
+  .mock-sender { font-size: 11px; color: var(--ink-soft); margin-bottom: 14px; }
+  .mock-row { display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; margin-bottom: 7px; font-size: 12.5px; background: var(--card); }
+  .mock-row.top { border-color: var(--ink); box-shadow: 0 1px 4px rgba(27,42,65,.08); }
+  .mock-rank { width: 18px; height: 18px; border-radius: 5px; background: var(--paper); border: 1px solid var(--line); color: var(--ink-faint); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+  .mock-row.top .mock-rank { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .mock-folder { flex: 1; min-width: 0; }
+  .mock-folder b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mock-folder span { font-size: 10.5px; color: var(--ink-faint); }
+  .mock-conf { width: 30px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; flex: none; }
+  .mock-conf i { display: block; height: 100%; background: var(--accent); }
+  .mock-other { text-align: center; font-size: 11.5px; color: var(--ink-soft); border: 1px dashed var(--line); border-radius: 9px; padding: 7px; margin-top: 4px; }
+
+  /* sections */
+  section { padding: 78px 0; }
+  section.alt { background: var(--card); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.01em; margin-bottom: 14px; }
+  .section-head { max-width: 62ch; margin-bottom: 44px; }
+  .section-head p { color: var(--ink-soft); font-size: 16.5px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .step { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
+  section:not(.alt) .step { background: var(--card); }
+  .step-num { font-family: var(--serif); font-size: 30px; color: var(--accent-deep); margin-bottom: 10px; }
+  .step h3 { font-size: 16px; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .step p { font-size: 14px; color: var(--ink-soft); }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .feature { padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+  .feature h3 { font-size: 15.5px; margin: 12px 0 8px; }
+  .feature p { font-size: 14px; color: var(--ink-soft); }
+  .feature .glyph { width: 34px; height: 34px; border-radius: 9px; background: var(--paper); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--accent-deep); }
+
+  /* privacy strip */
+  .privacy { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .privacy ul { list-style: none; margin-top: 18px; }
+  .privacy li { padding-left: 30px; position: relative; margin-bottom: 13px; color: var(--ink-soft); font-size: 15px; }
+  .privacy li::before { content: "✓"; position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 6px; background: #eef2ee; border: 1px solid #d8e4d8; color: var(--good); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .privacy-card { background: var(--ink); color: #f4f1ea; border-radius: 16px; padding: 40px; }
+  .privacy-card h3 { font-family: var(--serif); font-weight: 500; font-size: 24px; margin-bottom: 12px; }
+  .privacy-card p { color: #b9c2ce; font-size: 15px; margin-bottom: 18px; }
+  .privacy-card .zero { display: flex; gap: 28px; margin-top: 26px; }
+  .privacy-card .zero div b { display: block; font-family: var(--serif); font-size: 30px; color: var(--accent); }
+  .privacy-card .zero div span { font-size: 12.5px; color: #8fa0b5; }
+
+  /* pricing */
+  .price-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); gap: 22px; justify-content: center; }
+  .price { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 34px; text-align: center; }
+  .price.hot { border-color: var(--ink); box-shadow: 0 20px 50px -30px rgba(27,42,65,.4); }
+  .price .tag { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); }
+  .price .amount { font-family: var(--serif); font-size: 46px; margin: 14px 0 2px; }
+  .price .amount small { font-size: 16px; color: var(--ink-faint); font-family: var(--sans); }
+  .price .per { font-size: 13px; color: var(--ink-faint); margin-bottom: 22px; }
+  .price ul { list-style: none; text-align: left; margin: 0 auto 26px; max-width: 240px; }
+  .price li { font-size: 14px; color: var(--ink-soft); padding: 6px 0 6px 24px; position: relative; }
+  .price li::before { content: "·"; position: absolute; left: 8px; color: var(--accent-deep); font-weight: 700; }
+
+  /* faq */
+  .faq { max-width: 720px; }
+  details { border-bottom: 1px solid var(--line); padding: 18px 0; }
+  summary { font-weight: 600; font-size: 15.5px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--ink-faint); font-size: 20px; font-weight: 400; }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--ink-soft); font-size: 14.5px; padding-top: 10px; max-width: 64ch; }
+
+  footer { border-top: 1px solid var(--line); padding: 36px 0; }
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-faint); }
+  .foot a { color: var(--ink-soft); text-decoration: none; margin-left: 18px; }
+  .foot a:hover { color: var(--ink); }
+
+  @media (max-width: 860px) {
+    .hero-grid, .privacy { grid-template-columns: 1fr; }
+    .mock { margin: 0 auto; }
+    .steps, .features { grid-template-columns: 1fr; }
+    .price-grid { grid-template-columns: minmax(0, 400px); }
+    header.hero { padding: 56px 0 48px; }
+    .nav-links a:not(.btn) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7" fill="#1B2A41"/><rect x="8" y="8" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/><rect x="17" y="8" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/><rect x="8" y="17" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/><rect x="17" y="17" width="7" height="7" rx="1.5" fill="#E8A87C"/></svg>
+      Pigeonhole
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn btn-primary" href="#pricing">Start free trial</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="kicker">For Outlook</div>
+      <h1>Your inbox knows where everything goes. Now Outlook does too.</h1>
+      <p class="lead">Pigeonhole learns how you already file email — every project folder, every
+      subfolder — and puts the right one a single click away. Filed, marked read, gone.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary btn-lg" href="#pricing">Start 7-day free trial</a>
+        <a class="btn btn-lg" href="#how">See how it works</a>
+      </div>
+      <p class="hero-note">Trains on your mailbox in under a minute · Nothing leaves your computer · $30/year after trial</p>
+    </div>
+
+    <div class="mock" role="img" aria-label="Pigeonhole taskpane showing five suggested folders for an email">
+      <div class="mock-bar">
+        <svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="7" fill="#1B2A41"/><rect x="8" y="8" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/><rect x="17" y="8" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/><rect x="8" y="17" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/><rect x="17" y="17" width="7" height="7" rx="1.5" fill="#E8A87C"/></svg>
+        Pigeonhole
+      </div>
+      <div class="mock-body">
+        <div class="mock-label">Filing</div>
+        <div class="mock-subject">RE: Brookside — inverter submittal review</div>
+        <div class="mock-sender">Dana Whitfield · ops@brooksideenergy.com</div>
+        <div class="mock-row top"><span class="mock-rank">1</span><span class="mock-folder"><b>Brookside Solar</b><span>Projects / Brookside Solar</span></span><span class="mock-conf"><i style="width:88%"></i></span></div>
+        <div class="mock-row"><span class="mock-rank">2</span><span class="mock-folder"><b>Permitting</b><span>Projects / Permitting</span></span><span class="mock-conf"><i style="width:34%"></i></span></div>
+        <div class="mock-row"><span class="mock-rank">3</span><span class="mock-folder"><b>Submittals</b><span>Projects / Brookside Solar / Submittals</span></span><span class="mock-conf"><i style="width:22%"></i></span></div>
+        <div class="mock-row"><span class="mock-rank">4</span><span class="mock-folder"><b>Invoices</b><span>Finance / Invoices</span></span><span class="mock-conf"><i style="width:9%"></i></span></div>
+        <div class="mock-row"><span class="mock-rank">5</span><span class="mock-folder"><b>Carlton Retrofit</b><span>Projects / Carlton Retrofit</span></span><span class="mock-conf"><i style="width:6%"></i></span></div>
+        <div class="mock-other">Other folders ▾</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="how" class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Three steps. The third one is the rest of your life.</h2>
+      <p>No rules to configure, no sender lists to maintain. Your existing folders are the training data.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Press Train</h3>
+        <p>Pigeonhole scans the messages already sitting in your folders and subfolders — who sent them,
+        what they were about — and builds a statistical model of your filing habits. Typically under a
+        minute, even for large mailboxes. Never more than a coffee.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Open an email</h3>
+        <p>The pinned pane shows the five folders this message most likely belongs in, ranked — plus an
+        <em>Other folders</em> option revealing the next five. The folder you wanted is almost always #1.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Click. Filed.</h3>
+        <p>One click marks the email read and moves it. Pigeonhole learns from every decision you confirm,
+        so it keeps getting sharper as your projects change.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Built for inboxes with real folder trees</h2>
+      <p>If you run projects, you have folders named after them — and twenty senders per project.
+      Rules can't keep up. Pattern-learning can.</p>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <div class="glyph"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M9.5 1 3 9h3.8L6 15l6.5-8H8.7L9.5 1z" fill="currentColor"/></svg></div>
+        <h3>One-click Outlook rules</h3>
+        <p>See a sender that should <em>always</em> go to one folder? Tap the bolt next to any suggestion
+        and Pigeonhole creates a real server-side Outlook rule — move + mark read — without touching the
+        rules dialog.</p>
+      </div>
+      <div class="feature">
+        <div class="glyph"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity=".4"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity=".4"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity=".4"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.2" fill="currentColor"/></svg></div>
+        <h3>Subfolders, handled</h3>
+        <p>Suggestions show the full path — <em>Projects / Brookside / Submittals</em> — so near-identical
+        subfolder names never trip you up. Deep trees are the whole point.</p>
+      </div>
+      <div class="feature">
+        <div class="glyph"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1a4 4 0 0 1 4 4v2h1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h1V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v2h4V5a2 2 0 0 0-2-2z" fill="currentColor"/></svg></div>
+        <h3>Private by architecture</h3>
+        <p>The model is a small file in local storage on your machine. There is no Pigeonhole server to
+        send anything to — nothing to breach, subpoena, or train someone else's AI on.</p>
+      </div>
+      <div class="feature">
+        <div class="glyph"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM8 4v4.2l3 1.8.7-1.2L9.5 7.4V4H8z" fill="currentColor"/></svg></div>
+        <h3>Fast to train, instant to use</h3>
+        <p>Training is a single pass over recent mail in each folder — seconds to a couple of minutes, never
+        ten. Ranking a message takes under a millisecond. No spinners between you and inbox zero.</p>
+      </div>
+      <div class="feature">
+        <div class="glyph"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 3h12v2H2V3zm0 4h12v2H2V7zm0 4h8v2H2v-2z" fill="currentColor"/></svg></div>
+        <h3>Learns as you file</h3>
+        <p>Every filing you confirm feeds back into the model on the spot. New project folder on Monday,
+        accurate suggestions by Tuesday. Retrain from scratch anytime.</p>
+      </div>
+      <div class="feature">
+        <div class="glyph"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M13.3 2.7a1.5 1.5 0 0 0-2.1 0L4 9.9V12h2.1l7.2-7.2a1.5 1.5 0 0 0 0-2.1zM2 14h12v-1.5H2V14z" fill="currentColor"/></svg></div>
+        <h3>Works where Outlook works</h3>
+        <p>Classic Outlook for Windows, new Outlook, and Outlook on the web — one add-in, one model.
+        Gmail support is on the roadmap.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="privacy" class="alt">
+  <div class="wrap privacy">
+    <div>
+      <h2>AI tools read your mail in the cloud. Pigeonhole doesn't.</h2>
+      <p style="color:var(--ink-soft); font-size:16.5px;">Copilot-style assistants ship every message off
+      to a datacenter and meter you by the token. Pigeonhole uses a proven statistical classifier that runs
+      entirely inside the add-in — the same math, none of the exposure, none of the metering.</p>
+      <ul>
+        <li><strong>Training data never leaves your machine.</strong> Messages are read via Microsoft's own
+        API and reduced to word statistics locally. Message bodies aren't even read.</li>
+        <li><strong>No account, no server, no telemetry.</strong> Your license key validates offline.</li>
+        <li><strong>No AI tokens.</strong> Zero marginal cost per email, zero rate limits, works offline
+        once trained.</li>
+        <li><strong>Delete it and it's gone.</strong> The model lives in local storage — remove the add-in
+        and nothing remains anywhere.</li>
+      </ul>
+    </div>
+    <div class="privacy-card">
+      <h3>What Pigeonhole sends to the cloud</h3>
+      <p>The complete list of message data transmitted to Pigeonhole's servers, third-party AI providers,
+      or anyone else:</p>
+      <p style="font-family:var(--serif); font-size:44px; color:#f4f1ea; margin:8px 0 0;">Nothing.</p>
+      <div class="zero">
+        <div><b>0</b><span>servers</span></div>
+        <div><b>0</b><span>tokens burned</span></div>
+        <div><b>0</b><span>emails uploaded</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin-left:auto; margin-right:auto;">
+      <h2>Costs less than one hour of filing email</h2>
+      <p>Try everything free for a week. No credit card to start.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price">
+        <div class="tag">Trial</div>
+        <div class="amount">$0</div>
+        <div class="per">7 days, full product</div>
+        <ul>
+          <li>Unlimited training &amp; filing</li>
+          <li>One-click rule creation</li>
+          <li>No credit card required</li>
+        </ul>
+        <a class="btn btn-lg" href="#faq" style="width:100%;">Download the add-in</a>
+      </div>
+      <div class="price hot">
+        <div class="tag" style="color:var(--accent-deep);">Annual</div>
+        <div class="amount">$30<small>/year</small></div>
+        <div class="per">one mailbox · all updates included</div>
+        <ul>
+          <li>Everything in the trial, forever</li>
+          <li>License key works offline</li>
+          <li>30-day money-back guarantee</li>
+        </ul>
+        <a class="btn btn-primary btn-lg" href="#" style="width:100%;">Buy Pigeonhole — $30/yr</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="alt">
+  <div class="wrap">
+    <div class="section-head"><h2>Questions, answered</h2></div>
+    <div class="faq">
+      <details>
+        <summary>How long does training actually take?</summary>
+        <p>Pigeonhole samples the most recent ~50 messages from each of your folders using Microsoft's
+        batched API, so a mailbox with 100 folders trains from roughly 5,000 messages — usually 30–90
+        seconds, dominated by download time. Building the model itself takes milliseconds. Hard cap:
+        nowhere near 10 minutes.</p>
+      </details>
+      <details>
+        <summary>Is my email really not uploaded anywhere?</summary>
+        <p>Really. The add-in talks to exactly one service: Microsoft Graph, the same API Outlook itself
+        uses, over your own Microsoft sign-in. Sender and subject metadata are converted to word counts
+        in memory and stored as a small model in local storage on your device. Pigeonhole has no backend.
+        You can verify this with your browser's network inspector — or read the source.</p>
+      </details>
+      <details>
+        <summary>How is this different from Outlook rules?</summary>
+        <p>Rules are exact-match and manual: you maintain them sender by sender, and they do nothing for
+        the long tail of new senders. Pigeonhole ranks <em>every</em> folder for <em>every</em> message,
+        including ones from senders it has never seen, using subjects, domains, and recipients. And when a
+        sender <em>should</em> be a rule, the bolt button creates it in one click.</p>
+      </details>
+      <details>
+        <summary>How is this different from AI email assistants?</summary>
+        <p>They send your mail to a large language model in the cloud and pay per token — so you pay per
+        token, and your mail is in someone else's datacenter. Folder prediction doesn't need a trillion
+        parameters; it needs your own filing history. Pigeonhole's classifier is small enough to run
+        locally, instant, free to run, and private by construction.</p>
+      </details>
+      <details>
+        <summary>Which Outlook versions are supported?</summary>
+        <p>Classic Outlook for Windows (Microsoft 365), the new Outlook for Windows, and Outlook on the
+        web, with a Microsoft 365 / Exchange Online mailbox. The pane can be pinned so suggestions update
+        as you move through your inbox. Gmail is on the roadmap.</p>
+      </details>
+      <details>
+        <summary>What happens when the trial ends?</summary>
+        <p>Filing pauses and your model stays put. Enter a license key ($30/year) and you're back exactly
+        where you left off. Nothing is deleted.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <span>© 2026 Pigeonhole. File email where you would.</span>
+    <span>
+      <a href="#privacy">Privacy</a>
+      <a href="#faq">Support</a>
+      <a href="#pricing">Pricing</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
