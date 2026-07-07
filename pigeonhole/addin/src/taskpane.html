@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pigeonhole</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <script src="https://alcdn.msauth.net/browser/3.28.1/js/msal-browser.min.js"></script>
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <header class="ph-header">
+    <div class="ph-brand">
+      <svg class="ph-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="28" height="28" rx="7" fill="#1B2A41"/>
+        <rect x="8"  y="8"  width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/>
+        <rect x="17" y="8"  width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/>
+        <rect x="8"  y="17" width="7" height="7" rx="1.5" fill="#F4F1EA" opacity=".45"/>
+        <rect x="17" y="17" width="7" height="7" rx="1.5" fill="#E8A87C"/>
+      </svg>
+      <span class="ph-name">Pigeonhole</span>
+    </div>
+    <span id="license-chip" class="ph-chip" hidden></span>
+  </header>
+
+  <main id="main">
+
+    <!-- Sign-in -->
+    <section id="view-signin" class="ph-view" hidden>
+      <div class="ph-empty">
+        <h2>Connect your mailbox</h2>
+        <p>Pigeonhole reads your folder structure to learn how you file email.
+           Everything it learns stays on this computer.</p>
+        <button id="btn-signin" class="ph-btn ph-btn-primary">Sign in with Microsoft</button>
+      </div>
+    </section>
+
+    <!-- No model yet -->
+    <section id="view-train" class="ph-view" hidden>
+      <div class="ph-empty">
+        <h2>Teach Pigeonhole your filing habits</h2>
+        <p>Training scans the recent messages already sitting in your folders
+           and builds a model of what goes where — typically in under a minute,
+           entirely on this machine.</p>
+        <button id="btn-train" class="ph-btn ph-btn-primary">Train on my folders</button>
+        <p class="ph-fineprint">Nothing is uploaded. No AI tokens are burned.
+           The model lives in local storage on this device.</p>
+      </div>
+    </section>
+
+    <!-- Training progress -->
+    <section id="view-progress" class="ph-view" hidden>
+      <div class="ph-empty">
+        <h2 id="progress-title">Training…</h2>
+        <div class="ph-progressbar"><div id="progress-fill"></div></div>
+        <p id="progress-detail" class="ph-fineprint"></p>
+      </div>
+    </section>
+
+    <!-- Suggestions -->
+    <section id="view-suggest" class="ph-view" hidden>
+      <div class="ph-current">
+        <div class="ph-current-label">Filing</div>
+        <div id="current-subject" class="ph-current-subject"></div>
+        <div id="current-sender" class="ph-current-sender"></div>
+      </div>
+
+      <ol id="suggestions" class="ph-suggestions"></ol>
+
+      <button id="btn-other" class="ph-other" hidden>
+        Other folders <span class="ph-other-caret">▾</span>
+      </button>
+      <ol id="suggestions-other" class="ph-suggestions" hidden></ol>
+
+      <div id="filed-banner" class="ph-banner" hidden></div>
+    </section>
+
+    <!-- Trial expired -->
+    <section id="view-expired" class="ph-view" hidden>
+      <div class="ph-empty">
+        <h2>Your trial has ended</h2>
+        <p>Keep filing at full speed for <strong>$30/year</strong>.</p>
+        <a class="ph-btn ph-btn-primary" href="https://pigeonhole.email/#pricing" target="_blank" rel="noopener">Buy a license</a>
+        <div class="ph-activate">
+          <input id="license-input" class="ph-input" placeholder="PGNH-XXXXXXXXXXXXXX-XXXXXX" spellcheck="false" />
+          <button id="btn-activate" class="ph-btn">Activate</button>
+        </div>
+        <p id="activate-error" class="ph-error" hidden></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="ph-footer">
+    <span id="model-stat" class="ph-stat"></span>
+    <span class="ph-footer-actions">
+      <button id="btn-retrain" class="ph-link" hidden>Retrain</button>
+      <button id="btn-enter-license" class="ph-link" hidden>Enter license</button>
+    </span>
+  </footer>
+
+  <template id="tpl-suggestion">
+    <li class="ph-suggestion">
+      <button class="ph-folder-btn">
+        <span class="ph-folder-rank"></span>
+        <span class="ph-folder-text">
+          <span class="ph-folder-name"></span>
+          <span class="ph-folder-path"></span>
+        </span>
+        <span class="ph-confidence"><span class="ph-confidence-fill"></span></span>
+      </button>
+      <button class="ph-rule-btn" title="Always: create an Outlook rule moving mail from this sender here">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M9.5 1 3 9h3.8L6 15l6.5-8H8.7L9.5 1z" fill="currentColor"/>
+        </svg>
+      </button>
+    </li>
+  </template>
+
+  <script src="classifier.js"></script>
+  <script src="store.js"></script>
+  <script src="license.js"></script>
+  <script src="auth.js"></script>
+  <script src="graph.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
