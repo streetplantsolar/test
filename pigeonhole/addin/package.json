@@ -6,6 +6,7 @@
   "scripts": {
     "dev-certs": "office-addin-dev-certs install",
     "dev": "http-server . -p 3000 --ssl --cert ~/.office-addin-dev-certs/localhost.crt --key ~/.office-addin-dev-certs/localhost.key -c-1",
+    "dev:win": "http-server . -p 3000 --ssl --cert \"%USERPROFILE%\\.office-addin-dev-certs\\localhost.crt\" --key \"%USERPROFILE%\\.office-addin-dev-certs\\localhost.key\" -c-1",
     "dev:codespace": "http-server . -p 3000 -c-1",
     "validate": "office-addin-manifest validate manifest.xml",
     "test": "node ../scripts/test-classifier.js"
