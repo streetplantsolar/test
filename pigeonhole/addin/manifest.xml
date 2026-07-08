@@ -2,7 +2,7 @@
 <!--
   Pigeonhole — Outlook add-in manifest.
 
-  For local development, replace https://addin.pigeonhole.email with
+  For local development, replace https://pigeonhole-addin.onrender.com with
   https://localhost:3000 (run `npm run dev` in addin/) and sideload this
   file: Outlook > Get Add-ins > My add-ins > Add a custom add-in.
   See docs/SETUP.md.
@@ -20,8 +20,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Pigeonhole"/>
   <Description DefaultValue="Files your email where you would. Learns your folder habits locally — private, instant, no AI tokens."/>
-  <IconUrl DefaultValue="https://addin.pigeonhole.email/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://addin.pigeonhole.email/assets/icon-128.png"/>
+  <IconUrl DefaultValue="https://pigeonhole-addin.onrender.com/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://pigeonhole-addin.onrender.com/assets/icon-128.png"/>
   <SupportUrl DefaultValue="https://pigeonhole.email/support"/>
 
   <AppDomains>
@@ -42,7 +42,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://addin.pigeonhole.email/src/taskpane.html"/>
+        <SourceLocation DefaultValue="https://pigeonhole-addin.onrender.com/src/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -94,12 +94,12 @@
 
       <Resources>
         <bt:Images>
-          <bt:Image id="Icon16" DefaultValue="https://addin.pigeonhole.email/assets/icon-16.png"/>
-          <bt:Image id="Icon32" DefaultValue="https://addin.pigeonhole.email/assets/icon-32.png"/>
-          <bt:Image id="Icon80" DefaultValue="https://addin.pigeonhole.email/assets/icon-80.png"/>
+          <bt:Image id="Icon16" DefaultValue="https://pigeonhole-addin.onrender.com/assets/icon-16.png"/>
+          <bt:Image id="Icon32" DefaultValue="https://pigeonhole-addin.onrender.com/assets/icon-32.png"/>
+          <bt:Image id="Icon80" DefaultValue="https://pigeonhole-addin.onrender.com/assets/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="TaskpaneUrl" DefaultValue="https://addin.pigeonhole.email/src/taskpane.html"/>
+          <bt:Url id="TaskpaneUrl" DefaultValue="https://pigeonhole-addin.onrender.com/src/taskpane.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="Pigeonhole"/>
