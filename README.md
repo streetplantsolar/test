@@ -76,11 +76,75 @@ This is a complete, working MVP, deliberately kept small. Before real users:
   email/push delivery — in-app reminders only work if people open the app.
 - **Payments**: wire Stripe (a Checkout subscription for supporter, a Payment Link for
   pay-what-you-want) and replace the demo toggle in `lib/actions.ts` (`toggleSupporter`).
-- **Password reset** needs email; add it alongside reminder email.
-- **Backups**: it's one SQLite file — Litestream or a nightly copy of `data/` is plenty for a
-  long time.
+- **Password reset** needs email; add it alongside reminder email (see "Email" below).
 - **Moderation**: circles are open-join; you'll eventually want reporting and circle stewards.
 - **Photos**: item photos were skipped to stay dependency-free; add object storage when wanted.
+
+## Backups
+
+It's a single SQLite file (`data/comn.db`), so backups are easy. Two options — pick one.
+
+### Easiest: scheduled snapshot (no cloud account needed)
+
+`npm run backup` writes a consistent snapshot to `data/backups/` using SQLite's
+`VACUUM INTO` (safe to run while the app is live — no WAL corruption, unlike copying the file
+by hand). It keeps the newest 14 by default.
+
+Run it nightly with cron:
+
+```cron
+# every night at 3am — adjust the path to your install
+0 3 * * *  cd /path/to/comn && /usr/bin/npm run backup >> /var/log/comn-backup.log 2>&1
+```
+
+Then copy `data/backups/` offsite however you already move files (rsync, `rclone` to a cloud
+drive, etc.). Env knobs: `COMN_BACKUP_DIR`, `COMN_BACKUP_KEEP`.
+
+### More robust: Litestream (continuous, point-in-time restore)
+
+For streaming replication to object storage — so you can lose at most a few seconds — use
+[Litestream](https://litestream.io). Copy `litestream.example.yml` to `litestream.yml`, fill in
+a bucket (Cloudflare R2 or Backblaze B2 are cheapest for something this small), and run it as a
+sidecar. Restore is one command. Full instructions are in the example file.
+
+## Email (password reset + reminder delivery)
+
+You have `hello.comn.one@gmail.com` for outbound mail. Gmail SMTP is the quickest way to send:
+
+1. **Turn on 2-Step Verification** on that Google account, then create an **App Password**
+   (Google Account → Security → App passwords). Gmail will *not* accept the normal account
+   password over SMTP — you need this 16-character app password.
+2. Put the credentials in `.env` (never commit it — `.gitignore` already excludes `.env*`):
+
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=465
+   SMTP_USER=hello.comn.one@gmail.com
+   SMTP_PASS=your-16-char-app-password
+   MAIL_FROM="Comn.one <hello.comn.one@gmail.com>"
+   ```
+
+3. Add a mailer and wire it in. This isn't built yet — it needs `nodemailer` plus a password-reset
+   flow (token table, "forgot password" + "set new password" pages) and an email send inside the
+   reminder sweep. Say the word and I'll implement it end to end.
+
+   Gmail note: free Gmail sending caps at ~500 messages/day, which is plenty early on. When
+   Comn.one grows past that (or if reset emails start landing in spam), move `SMTP_*` to a
+   transactional provider like Resend, Postmark, or Amazon SES — same env vars, just different
+   host — and set up SPF/DKIM for the comn.one domain.
+
+## Running behind a proxy (Codespaces, Gitpod, tunnels, production)
+
+Every form and button in this app is a **Server Action**, which Next.js protects against CSRF by
+requiring the request `Origin` to match the host. Behind a proxy the two differ, and actions fail
+with **"Invalid Server Actions request."** `next.config.ts` already trusts `*.app.github.dev`
+(Codespaces) and `*.gitpod.io`. For your own domain, set `ALLOWED_ORIGINS`:
+
+```env
+ALLOWED_ORIGINS=comn.one,www.comn.one
+```
+
+Local `npm run dev` on `localhost` needs nothing.
 
 ## Code map
 

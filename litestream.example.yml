@@ -1,0 +1,36 @@
+# Litestream — continuous, streaming backup of the Comn.one database.
+#
+# Copy to litestream.yml and fill in your bucket. Litestream watches the SQLite
+# WAL and streams changes to object storage every few seconds, giving you
+# point-in-time restore. It runs as a long-lived sidecar next to the app.
+#
+# Setup (one time):
+#   1. Create a bucket on any S3-compatible host — AWS S3, Cloudflare R2,
+#      Backblaze B2, MinIO. R2 and B2 are the cheapest for something this small.
+#   2. Install Litestream: https://litestream.io/install
+#   3. Provide credentials via env: LITESTREAM_ACCESS_KEY_ID and
+#      LITESTREAM_SECRET_ACCESS_KEY.
+#   4. Run it:   litestream replicate -config litestream.yml
+#      (In production, run this under systemd/Docker so it restarts on boot.)
+#
+# Restore after a data loss / on a fresh machine:
+#   litestream restore -config litestream.yml /path/to/data/comn.db
+#   ...then start the app as usual.
+
+dbs:
+  - path: ./data/comn.db
+    replicas:
+      # --- AWS S3 ---
+      - type: s3
+        bucket: your-comn-backups
+        path: comn.db
+        region: us-east-1
+
+      # --- OR Cloudflare R2 / Backblaze B2 / MinIO (comment out the S3 block
+      #     above and use this instead) ---
+      # - type: s3
+      #   bucket: your-comn-backups
+      #   path: comn.db
+      #   endpoint: https://<accountid>.r2.cloudflarestorage.com
+      #   region: auto
+      #   force-path-style: true

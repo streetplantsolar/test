@@ -16,7 +16,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body>
+      {/* Browser extensions (Grammarly, password managers) inject attributes
+          into <body> before React hydrates; suppress the resulting one-level
+          hydration warning. */}
+      <body suppressHydrationWarning>
         <header className="topbar">
           <div className="topbar-inner">
             <Link href={user ? "/home" : "/"} className="wordmark">

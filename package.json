@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "backup": "node scripts/backup.mjs"
   },
   "dependencies": {
     "next": "^15.3.3",
