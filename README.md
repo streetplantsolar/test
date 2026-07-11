@@ -84,13 +84,19 @@ a labeled demo toggle. The pieces:
 | `ALLOWED_ORIGINS` | Form submissions from your domain when behind a proxy. |
 | `COMN_DATA_DIR` | Move the SQLite file somewhere durable. |
 
-### Scheduled reminders (production)
+### Scheduled reminders & backups (production)
 
 The in-app sweep runs whenever someone browses; to guarantee delivery even on quiet days, set
-`CRON_SECRET` and add a cron line on the server:
+`CRON_SECRET` and schedule the two endpoints. **Easiest (free): GitHub Actions** — this repo
+ships `.github/workflows/cron.yml` which pings reminders every 30 minutes and takes a nightly
+database snapshot. Enable it by adding, in the repo's *Settings → Secrets and variables →
+Actions*: secret `CRON_SECRET` (same value as the server's) and variable `APP_URL`.
+
+Or from any box with cron:
 
 ```cron
 */30 * * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://comn.one/api/cron/remind
+0 3 * * *     curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://comn.one/api/cron/backup
 ```
 
 ### Stripe setup (once you want real payments)
@@ -106,6 +112,43 @@ The in-app sweep runs whenever someone browses; to guarantee delivery even on qu
 
 Subscribing, card updates, and cancellation all round-trip through Stripe Checkout and the
 billing portal; the webhook is the single source of truth for the supporter flag.
+
+## Deploying on Render
+
+The repo ships `render.yaml`, so Render builds the whole service from it. **One thing is
+non-negotiable: the persistent disk.** Render wipes the filesystem on every deploy — without the
+disk (which requires the Starter instance, ~$7/mo), the SQLite database would be erased each
+time you push. The blueprint already mounts a 1 GB disk at `/var/data` and points
+`COMN_DATA_DIR` there.
+
+The go-live checklist, in order:
+
+1. **Create the service**: Render Dashboard → *New → Blueprint* → select the
+   `streetplantsolar/comn` repo → when prompted for `APP_URL`, enter the service URL Render
+   assigns (e.g. `https://comn.onrender.com`). Deploy, sign up, shelve something — it works with
+   nothing else configured.
+2. **Turn on scheduled reminders + nightly backups (free)**: in the Render dashboard, copy the
+   generated `CRON_SECRET` env value. In the GitHub repo → *Settings → Secrets and variables →
+   Actions* → add secret `CRON_SECRET` (that value) and variable `APP_URL` (same URL). The
+   bundled workflow (`.github/workflows/cron.yml`) does the rest; test it from the *Actions* tab
+   with "Run workflow".
+3. **Email**: on `hello.comn.one@gmail.com`, enable 2-Step Verification, create an App Password
+   (the normal password won't work over SMTP), then add `SMTP_HOST=smtp.gmail.com`,
+   `SMTP_PORT=465`, `SMTP_USER`, `SMTP_PASS`, and `MAIL_FROM` in the Render service's
+   *Environment* tab. Redeploys automatically; test via "Forgot your password?".
+4. **Custom domain**: Render service → *Settings → Custom Domains* → add `comn.one` and
+   `www.comn.one`, create the DNS records it shows at your registrar (TLS is automatic). Then
+   update the env: `APP_URL=https://comn.one`, `ALLOWED_ORIGINS=comn.one,www.comn.one` — and the
+   GitHub `APP_URL` variable to match.
+5. **Stripe** (whenever you're ready): create the $0.99/mo recurring price and webhook endpoint
+   (`https://comn.one/api/stripe/webhook` — see "Stripe setup" above), add `STRIPE_SECRET_KEY`,
+   `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, and optionally `STRIPE_PAYMENT_LINK` to the
+   *Environment* tab. Do one test-mode purchase before switching to live keys.
+
+Belt and braces on data: Render snapshots the disk daily (7-day retention), the nightly cron
+writes app-level snapshots to `/var/data/backups`, and you can pull a copy anytime from the
+service's *Shell* tab (`npm run backup`, then download). Keep the free-tier temptation at bay —
+free instances sleep and **have no disk**, so they're only safe for throwaway demos.
 
 ## Still open (by choice)
 

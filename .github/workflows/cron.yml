@@ -1,0 +1,38 @@
+# Free scheduler for the app's cron endpoints, so we don't need paid Render
+# cron services. Runs on GitHub Actions:
+#   - reminders: every 30 minutes (delivery of due-date reminder emails)
+#   - backup:    nightly database snapshot to the persistent disk
+#
+# Setup (repo → Settings → Secrets and variables → Actions):
+#   secret  CRON_SECRET  — same value as the Render service's CRON_SECRET
+#   variable APP_URL     — e.g. https://comn.onrender.com (or https://comn.one)
+#
+# Note: GitHub schedules are best-effort and can run several minutes late —
+# fine for reminders and backups. The in-app lazy sweep still runs on every
+# page load regardless, so this is a guarantee, not the only path.
+
+name: cron
+on:
+  schedule:
+    - cron: "*/30 * * * *" # reminders (also triggers on the nightly tick)
+    - cron: "17 3 * * *" # nightly backup
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send due-date reminders
+        run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.APP_URL }}/api/cron/remind"
+
+  backup:
+    # Only on the nightly schedule (or manual dispatch), not every 30 min.
+    if: github.event.schedule == '17 3 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Snapshot the database
+        run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.APP_URL }}/api/cron/backup"

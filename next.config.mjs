@@ -24,6 +24,7 @@ const nextConfig = {
       allowedOrigins: [
         "*.app.github.dev", // GitHub Codespaces
         "*.gitpod.io",
+        "*.onrender.com", // Render
         ...extraOrigins,
       ],
     },

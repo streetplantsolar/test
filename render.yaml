@@ -1,0 +1,38 @@
+# Render Blueprint for Comn.one — https://render.com/docs/blueprint-spec
+#
+# Deploy: Render Dashboard → New → Blueprint → pick this repo. Render reads
+# this file and creates the service. You'll be prompted for APP_URL (enter
+# your onrender.com URL, e.g. https://comn.onrender.com — update it later
+# when comn.one points here).
+#
+# THE DISK IS NOT OPTIONAL. Render's filesystem is wiped on every deploy;
+# the persistent disk below is where the SQLite database lives. Disks
+# require a paid instance (Starter, ~$7/mo) — on the free tier your data
+# would vanish on each deploy. Render also snapshots disks daily (7-day
+# retention), which pairs with the app's own /api/cron/backup snapshots.
+#
+# Email + Stripe env vars aren't listed here on purpose: add them in the
+# service's Environment tab when you're ready (see .env.example for names).
+# Everything degrades gracefully until then.
+
+services:
+  - type: web
+    name: comn
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    disk:
+      name: comn-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: COMN_DATA_DIR
+        value: /var/data
+      - key: CRON_SECRET
+        generateValue: true # copy from the dashboard into GitHub Actions secrets
+      - key: APP_URL
+        sync: false # prompted at deploy: your public URL

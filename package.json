@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Comn.one — a trust-based sharing shelf for friends and neighbors.",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
