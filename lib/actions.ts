@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, newInviteCode, now, uid } from "./db";
 import { endSession, hashPassword, requireUser, startSession, verifyPassword } from "./auth";
+import { appUrl, sendMail } from "./mail";
 import {
   activeLoanForItem,
   circleById,
@@ -69,6 +70,49 @@ export async function login(form: FormData): Promise<void> {
     fail("/login", "Email and password don't match.");
   }
   await startSession(user.id);
+  redirect("/home");
+}
+
+export async function requestPasswordReset(form: FormData): Promise<void> {
+  const email = str(form, "email").toLowerCase();
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as
+    | unknown as User
+    | undefined;
+  // Always respond identically whether or not the account exists, so this
+  // form can't be used to probe which emails are registered.
+  if (user) {
+    const token = uid() + uid().replace(/-/g, "");
+    db.prepare("DELETE FROM password_resets WHERE user_id = ?").run(user.id);
+    db.prepare(
+      "INSERT INTO password_resets (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)"
+    ).run(token, user.id, now() + 60 * 60 * 1000, now()); // valid 1 hour
+    const link = appUrl(`/reset/${token}`);
+    sendMail(
+      user.email,
+      "Reset your Comn.one password",
+      `Hi ${user.name.split(" ")[0]},\n\nSomeone (hopefully you) asked to reset the password for @${user.username}. ` +
+        `This link works for one hour:\n\n${link}\n\nIf it wasn't you, ignore this — nothing changes.\n\n— Comn.one`
+    );
+  }
+  redirect("/forgot?sent=1");
+}
+
+export async function resetPassword(token: string, form: FormData): Promise<void> {
+  const row = db
+    .prepare("SELECT * FROM password_resets WHERE token = ? AND expires_at > ?")
+    .get(token, now()) as unknown as { user_id: string } | undefined;
+  if (!row) fail("/forgot", "That reset link expired or was already used — request a new one.");
+  const password = form.get("password");
+  if (typeof password !== "string" || password.length < 8)
+    fail(`/reset/${token}`, "Passwords need at least 8 characters.");
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(
+    hashPassword(password),
+    row.user_id
+  );
+  db.prepare("DELETE FROM password_resets WHERE token = ?").run(token);
+  // Sign out every existing session for safety, then start a fresh one.
+  db.prepare("DELETE FROM sessions WHERE user_id = ?").run(row.user_id);
+  await startSession(row.user_id);
   redirect("/home");
 }
 

@@ -24,7 +24,8 @@ export default async function LoginPage({
         </p>
       </form>
       <p className="small muted">
-        New here? <Link href="/join">Join Comn.one</Link>.
+        New here? <Link href="/join">Join Comn.one</Link> · Forgot your password?{" "}
+        <Link href="/forgot">Reset it</Link>.
       </p>
     </>
   );

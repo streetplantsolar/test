@@ -7,6 +7,8 @@ export interface User {
   place: string;
   bio: string;
   supporter: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: number;
 }
 

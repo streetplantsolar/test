@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
+import { paymentLink, stripeEnabled } from "@/lib/stripe";
 
 export default async function SupportPage() {
   const user = await currentUser();
@@ -40,19 +41,36 @@ export default async function SupportPage() {
         <p>Money flows to keeping the commons open — not to a middleman.</p>
       </div>
 
-      <p className="notice" style={{ maxWidth: "40rem" }}>
-        Payments aren&rsquo;t connected yet while Comn.one finds its feet. When they are,
-        it&rsquo;ll be through a simple processor with public accounting of what running this
-        costs.
-      </p>
+      {!stripeEnabled() && !paymentLink() && (
+        <p className="notice" style={{ maxWidth: "40rem" }}>
+          Payments aren&rsquo;t connected yet while Comn.one finds its feet. When they are,
+          it&rsquo;ll be through a simple processor with public accounting of what running this
+          costs.
+        </p>
+      )}
 
       <p>
+        {paymentLink() && (
+          <>
+            <a href={paymentLink()!} className="btn">
+              Chip in what you want
+            </a>{" "}
+          </>
+        )}
         {user ? (
-          <Link href="/settings" className="btn quiet">
-            Supporter settings
-          </Link>
+          stripeEnabled() && !user.supporter ? (
+            <>
+              <Link href="/settings" className="btn quiet">
+                Become a supporter — $0.99/mo
+              </Link>
+            </>
+          ) : (
+            <Link href="/settings" className="btn quiet">
+              Supporter settings
+            </Link>
+          )
         ) : (
-          <Link href="/join" className="btn">
+          <Link href="/join" className="btn quiet">
             Join Comn.one
           </Link>
         )}

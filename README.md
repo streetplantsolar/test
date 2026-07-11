@@ -40,16 +40,17 @@ window), create two accounts, friend each other, and lend something.
 
 | Area | Details |
 | --- | --- |
-| Accounts | Email + password (scrypt-hashed), 90-day cookie sessions. No email verification yet. |
+| Accounts | Email + password (scrypt-hashed), 90-day cookie sessions, password reset by email. No email verification yet. |
 | Friends | Add individually by username; accept/decline; remove. |
 | Crews | Private friend groups (book club, street, band) joined via invite code — everyone in a crew sees each other's shelves without pairwise friending. |
 | Circles | Public neighborhood/city groups anyone can browse and join. Joining exposes nothing by itself. |
 | Items | Title, category, description, care notes, optional return window (1–365 days), per-item visibility: *friends & crews* (default) or *also neighbors*. Archive ("shelve away") anytime. |
 | Loans | Request (with a note) → owner approves → reserved → owner marks handed over → out (due date set from the item's return window) → owner marks returned. Either side can cancel/decline before handover. |
-| Reminders | In-app notifications at 3-days-out, due-today, and overdue (overdue also pings the owner). Runs as a lazy sweep on requests — see "Toward production." |
+| Reminders | In-app *and email* at 3-days-out, due-today, and overdue (overdue also pings the owner). Runs as a lazy sweep on requests, plus a cron endpoint (`GET /api/cron/remind`) so reminders go out even when nobody is browsing. |
 | Notifications | In-app inbox with unread badge for requests, approvals, handovers, returns, friend activity. |
-| Supporter | $0.99/month tier (demo toggle in Settings — payments not wired). Currently buys barcode scanning: camera scan (`BarcodeDetector` API) or typed ISBN → Open Library lookup → pre-filled shelf form. Manual adding stays free forever. |
-| Support page | Explains the money model in plain words. |
+| Email | Nodemailer over SMTP (`lib/mail.ts`), config via env. Without SMTP configured, emails are logged to the server console so every flow stays testable. |
+| Supporter | $0.99/month via Stripe Checkout + webhook + billing portal (`app/api/stripe/*`), active when Stripe env vars are set; a clearly-labeled demo toggle in Settings otherwise. Buys barcode scanning: camera scan (`BarcodeDetector` API) or typed ISBN → Open Library lookup → pre-filled shelf form. Manual adding stays free forever. |
+| Support page | Explains the money model in plain words; shows the pay-what-you-want Stripe Payment Link when configured. |
 
 ## On money: a recommendation
 
@@ -67,18 +68,50 @@ following, and nothing else** —
 Skip per-transaction tips between users — the moment money changes hands around a loan, it stops
 being a favor and starts being a rental, which is exactly the dynamic this exists to escape.
 
-## Toward production
+## Configuration
 
-This is a complete, working MVP, deliberately kept small. Before real users:
+Copy `.env.example` to `.env` and fill in what you use. **Everything is optional** — with no
+env at all, the app runs fully: emails print to the server console, and the supporter tier uses
+a labeled demo toggle. The pieces:
 
-- **Reminders & email**: the reminder sweep (`lib/reminders.ts`) runs lazily on authenticated
-  requests, at most once a minute. Point a real scheduler (cron, or your host's) at it and add
-  email/push delivery — in-app reminders only work if people open the app.
-- **Payments**: wire Stripe (a Checkout subscription for supporter, a Payment Link for
-  pay-what-you-want) and replace the demo toggle in `lib/actions.ts` (`toggleSupporter`).
-- **Password reset** needs email; add it alongside reminder email (see "Email" below).
+| Env vars | Enables |
+| --- | --- |
+| `APP_URL` | Correct links in emails and Stripe redirects (set to your public URL). |
+| `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM` | Real email: password resets + reminder emails. |
+| `CRON_SECRET` | The `GET /api/cron/remind` scheduler endpoint (see below). |
+| `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Real $0.99/mo supporter checkout, webhook, billing portal. |
+| `STRIPE_PAYMENT_LINK` | The pay-what-you-want button on /support. |
+| `ALLOWED_ORIGINS` | Form submissions from your domain when behind a proxy. |
+| `COMN_DATA_DIR` | Move the SQLite file somewhere durable. |
+
+### Scheduled reminders (production)
+
+The in-app sweep runs whenever someone browses; to guarantee delivery even on quiet days, set
+`CRON_SECRET` and add a cron line on the server:
+
+```cron
+*/30 * * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://comn.one/api/cron/remind
+```
+
+### Stripe setup (once you want real payments)
+
+1. In the Stripe dashboard: create a **Product** ("Comn.one Supporter") with a **recurring
+   $0.99/month price** → copy the `price_...` id into `STRIPE_PRICE_ID`.
+2. Developers → API keys → copy the secret key into `STRIPE_SECRET_KEY`.
+3. Developers → Webhooks → add endpoint `https://comn.one/api/stripe/webhook` with events
+   `checkout.session.completed`, `customer.subscription.updated`,
+   `customer.subscription.deleted` → copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+4. Optional: create a **Payment Link** with "customers choose what to pay" for the tip jar →
+   `STRIPE_PAYMENT_LINK`.
+
+Subscribing, card updates, and cancellation all round-trip through Stripe Checkout and the
+billing portal; the webhook is the single source of truth for the supporter flag.
+
+## Still open (by choice)
+
 - **Moderation**: circles are open-join; you'll eventually want reporting and circle stewards.
 - **Photos**: item photos were skipped to stay dependency-free; add object storage when wanted.
+- **Email verification** at signup (reset emails make stale addresses self-correcting for now).
 
 ## Backups
 
@@ -124,9 +157,9 @@ You have `hello.comn.one@gmail.com` for outbound mail. Gmail SMTP is the quickes
    MAIL_FROM="Comn.one <hello.comn.one@gmail.com>"
    ```
 
-3. Add a mailer and wire it in. This isn't built yet — it needs `nodemailer` plus a password-reset
-   flow (token table, "forgot password" + "set new password" pages) and an email send inside the
-   reminder sweep. Say the word and I'll implement it end to end.
+3. Set `APP_URL` to the site's public URL so email links point at the right place. That's it —
+   the mailer, password-reset flow, and reminder emails are all built and switch on
+   automatically when these vars are present.
 
    Gmail note: free Gmail sending caps at ~500 messages/day, which is plenty early on. When
    Comn.one grows past that (or if reset emails start landing in spam), move `SMTP_*` to a
@@ -137,7 +170,7 @@ You have `hello.comn.one@gmail.com` for outbound mail. Gmail SMTP is the quickes
 
 Every form and button in this app is a **Server Action**, which Next.js protects against CSRF by
 requiring the request `Origin` to match the host. Behind a proxy the two differ, and actions fail
-with **"Invalid Server Actions request."** `next.config.ts` already trusts `*.app.github.dev`
+with **"Invalid Server Actions request."** `next.config.mjs` already trusts `*.app.github.dev`
 (Codespaces) and `*.gitpod.io`. For your own domain, set `ALLOWED_ORIGINS`:
 
 ```env
@@ -145,6 +178,15 @@ ALLOWED_ORIGINS=comn.one,www.comn.one
 ```
 
 Local `npm run dev` on `localhost` needs nothing.
+
+**If `npm run dev` says "Cannot find module 'typescript'"** (seen in some Codespaces images):
+your npm is skipping devDependencies, usually because `NODE_ENV=production` is set. This repo
+now keeps `typescript` in regular `dependencies` and uses a plain-JS `next.config.mjs`, so a
+normal `npm install` is enough. If a stale install lingers, run:
+
+```bash
+rm -rf node_modules && npm install --include=dev
+```
 
 ## Code map
 
@@ -156,13 +198,18 @@ app/            pages (Next.js App Router, server components + server actions)
   circles/        neighborhood/city groups    u/[username] profiles
   notifications/  inbox          settings/    profile + supporter
   support/        the money page
+  forgot/, reset/[token]/        password reset
+  api/cron/remind/               scheduler endpoint for reminder emails
+  api/stripe/                    checkout, webhook, billing portal
 components/     item card, flash notice, barcode scanner (the one client component)
 lib/
-  db.ts         schema + node:sqlite connection
+  db.ts         schema + migrations + node:sqlite connection
   auth.ts       sessions, scrypt password hashing
   queries.ts    all reads (visibility rules live here)
   actions.ts    all writes (server actions, with authorization checks)
-  reminders.ts  staged due-date reminder sweep
+  reminders.ts  staged due-date reminder sweep (in-app + email)
+  mail.ts       SMTP mailer (console fallback in dev)
+  stripe.ts     Stripe client + config detection
 ```
 
 No CSS framework, no component library, no ORM: one hand-written stylesheet and SQL you can

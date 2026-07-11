@@ -1,20 +1,30 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout, toggleSupporter, updateProfile } from "@/lib/actions";
+import { stripeEnabled } from "@/lib/stripe";
 import { Flash } from "@/components/flash";
 
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; upgraded?: string }>;
 }) {
   const user = await requireUser();
-  const { error, saved } = await searchParams;
+  const { error, saved, upgraded } = await searchParams;
 
   return (
     <>
       <h1>Settings</h1>
-      <Flash error={error} good={saved ? "Saved." : undefined} />
+      <Flash
+        error={error}
+        good={
+          saved
+            ? "Saved."
+            : upgraded
+              ? "Thank you for supporting the commons! Your perks unlock as soon as Stripe confirms the payment (usually seconds)."
+              : undefined
+        }
+      />
 
       <fieldset>
         <legend>Profile</legend>
@@ -53,15 +63,31 @@ export default async function SettingsPage({
             <Link href="/support">Read more</Link>.
           </p>
         )}
-        <form action={toggleSupporter}>
-          <button type="submit" className="quiet">
-            {user.supporter ? "Stop supporting (demo)" : "Become a supporter (demo)"}
-          </button>
-        </form>
-        <p className="small muted" style={{ marginBottom: 0 }}>
-          Payments aren&rsquo;t wired up yet — this toggle is a stand-in so the supporter
-          experience can be tried end to end.
-        </p>
+        {stripeEnabled() ? (
+          user.supporter ? (
+            <form method="post" action="/api/stripe/portal">
+              <button type="submit" className="quiet">
+                Manage subscription (update card, cancel)
+              </button>
+            </form>
+          ) : (
+            <form method="post" action="/api/stripe/checkout">
+              <button type="submit">Become a supporter — $0.99/month</button>
+            </form>
+          )
+        ) : (
+          <>
+            <form action={toggleSupporter}>
+              <button type="submit" className="quiet">
+                {user.supporter ? "Stop supporting (demo)" : "Become a supporter (demo)"}
+              </button>
+            </form>
+            <p className="small muted" style={{ marginBottom: 0 }}>
+              Stripe isn&rsquo;t configured in this environment, so this toggle stands in for the
+              real subscription. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID to enable checkout.
+            </p>
+          </>
+        )}
       </fieldset>
 
       <form action={logout}>

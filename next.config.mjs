@@ -1,4 +1,7 @@
-import type { NextConfig } from "next";
+// Plain-JS config on purpose: loading a next.config.ts requires the
+// `typescript` package at boot, which breaks in environments where npm
+// skips devDependencies (some Codespaces/CI images set production mode).
+// JS config loads unconditionally.
 
 // Server Actions (every form/button in this app uses them) are protected
 // against CSRF by comparing the request Origin to the Host. Behind a proxy
@@ -14,7 +17,8 @@ const extraOrigins = (process.env.ALLOWED_ORIGINS ?? "")
   .map((o) => o.trim())
   .filter(Boolean);
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [

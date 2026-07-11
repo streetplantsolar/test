@@ -76,6 +76,13 @@ CREATE TABLE IF NOT EXISTS loans (
   closed_at INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS password_resets (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -101,7 +108,24 @@ function connect(): DatabaseSync {
   conn.exec("PRAGMA busy_timeout = 5000;");
   conn.exec("PRAGMA journal_mode = WAL;");
   conn.exec(SCHEMA);
+  migrate(conn);
   return conn;
+}
+
+// Additive migrations for databases created before a column existed.
+// ALTER TABLE ADD COLUMN throws if the column is already there — ignore.
+function migrate(conn: DatabaseSync): void {
+  const addColumns = [
+    "ALTER TABLE users ADD COLUMN stripe_customer_id TEXT",
+    "ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT",
+  ];
+  for (const sql of addColumns) {
+    try {
+      conn.exec(sql);
+    } catch {
+      /* column already exists */
+    }
+  }
 }
 
 // Cache the connection on globalThis so dev-mode module reloads reuse it,
